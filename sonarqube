@@ -48,7 +48,7 @@ environment {  SCANNER_HOME = tool 'sonar'  }
             }
         }
 
-
-
+for webhook
+http://<jenkins-server>/sonarqube-webhook/    
 
 
