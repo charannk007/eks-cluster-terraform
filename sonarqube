@@ -1,31 +1,23 @@
 #!/bin/bash
-
 # Update system
 sudo apt update && sudo apt upgrade -y
-
 # Install required dependencies
 sudo apt install -y openjdk-17-jdk wget unzip net-tools
-
 # Add SonarQube user
 sudo useradd -m -d /opt/sonarqube -s /bin/bash sonar
 sudo passwd sonar
-
 # Switch to SonarQube user
 sudo su - sonar <<EOF
-
 # Download and extract SonarQube
 wget https://binaries.sonarsource.com/Distribution/sonarqube/sonarqube-9.9.2.77730.zip
 unzip sonarqube-9.9.2.77730.zip
 mv sonarqube-9.9.2.77730 sonarqube
-
 EOF
-
 # Configure SonarQube as a service
 sudo tee /etc/systemd/system/sonarqube.service > /dev/null <<EOL
 [Unit]
 Description=SonarQube service
 After=network.target
-
 [Service]
 Type=forking
 ExecStart=/opt/sonarqube/sonarqube/bin/linux-x86-64/sonar.sh start
@@ -34,14 +26,29 @@ User=sonar
 Group=sonar
 Restart=always
 LimitNOFILE=65536
-
 [Install]
 WantedBy=multi-user.target
 EOL
-
 # Reload systemd and start SonarQube service
 sudo systemctl daemon-reload
 sudo systemctl enable --now sonarqube
-
 # Print status
 sudo systemctl status sonarqube
+
+Goto SonarQube console --- Click on 'Administration' --- Click on 'Security' --- Select 'Users' --- You can see 'Tokens' --- Click on 3 dashes icon --- A New dialogue --- Name: token, Expires in: 90days --- Generate --- You can see token in green colour. Copy it. 
+Manage Jenkins --- Security --- Credentials --- Click on 'global' --- Click on 'Add Credentials' --- Kind: Secret text, Scope: Global, Secret: <Paste the token copied from SonarQube console>, ID: sonar-token, Description: sonar-token --- Create
+Manage Jenkins --- System --- Scroll down to 'SonarQube servers' --- Click on 'Add SonarQube' --- Name: sonar-server --- ServerURL: <PublicIPofSQinstalledVM>:9000 --- Server Authentication Token: select 'sonar-token' --- Apply --- Save
+
+environment {  SCANNER_HOME = tool 'sonar'  }
+        stage('Sonar Analysis') {
+            steps {
+                withSonarQubeEnv('sonar') {
+                    sh "$SCANNER_HOME/bin/sonar -Dsonar.projectName=<ProjectName> -Dsonar.projectKey=<KEY> -Dsonar.java.binaries=target"
+                }
+            }
+        }
+
+
+
+
+
